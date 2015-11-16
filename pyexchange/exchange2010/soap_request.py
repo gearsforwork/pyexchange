@@ -625,3 +625,59 @@ def update_item(event, updated_attributes, calendar_item_update_operation_type):
       )
 
   return root
+
+############
+# CONTACTS #
+############
+
+
+def new_contact(contact):
+    """
+    Requests a new Contact to be created
+
+    https://msdn.microsoft.com/en-us/library/aa564690(v=exchg.140).aspx
+    <m:CreateItem 
+	xmlns=m:"http://schemas.microsoft.com/exchange/services/2006/messages"
+	xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types">
+      <m:SavedItemFolderId>
+        <t:DistinguishedFolderId Id="contacts"/>
+      </m:SavedItemFolderId>
+      <m:Items>
+        <t:Contact>
+          <t:FileAs>SampleContact</t:FileAs>
+          <t:GivenName>Tanja</t:GivenName>
+          <t:CompanyName>Blue Yonder Airlines</t:CompanyName>
+          <t:EmailAddresses>
+            <t:Entry Key="EmailAddress1">tplate@example.com</t:Entry>
+          </t:EmailAddresses>
+          <t:PhysicalAddresses>
+            <t:Entry Key="Business">
+              <t:Street>1234 56th Ave</t:Street>
+              <t:City>La Habra</t:City>
+              <t:State>CA</t:State>
+              <t: CountryOrRegion>USA</t: CountryOrRegion>
+            </t:Entry>
+          </t:PhysicalAddresses>
+          <t:PhoneNumbers>
+            <t:Entry Key="BusinessPhone">4255550199</t:Entry>
+          </t:PhoneNumbers>
+          <t:JobTitle>Manager</t:JobTitle>
+          <t:Surname>Plate</t:Surname>
+        </t:Contact>
+      </m:Items>
+    </m:CreateItem>
+    """
+    id = T.DistinguishedFolderId(Id=contact.calendar_id) if contact.calendar_id in DISTINGUISHED_IDS else T.FolderId(Id=calendar.contact_id)
+    root = M.CreateItem(
+      M.SavedItemFolderId(id),
+      M.Items(
+        T.CalendarItem(
+          T.Subject(event.subject),
+          T.Body(event.body or u'', BodyType="HTML"),
+        )
+      ),
+      SendMeetingInvitations="SendToAllAndSaveCopy"
+    )
+    contact_node = root.xpath(u'/m:CreateItem/m:Items/t:Contact', namespaces=NAMESPACES)[0]
+
+    return root
