@@ -645,8 +645,8 @@ def new_contact(contact):
       <m:Items>
         <t:Contact>
           <t:FileAs>SampleContact</t:FileAs>
-          <t:GivenName>Tanja</t:GivenName>
-          <t:CompanyName>Blue Yonder Airlines</t:CompanyName>
+          <t:GivenName>{contact.subject}</t:GivenName>
+          <t:CompanyName>{contact.body}</t:CompanyName>
           <t:EmailAddresses>
             <t:Entry Key="EmailAddress1">tplate@example.com</t:Entry>
           </t:EmailAddresses>
@@ -671,9 +671,9 @@ def new_contact(contact):
     root = M.CreateItem(
       M.SavedItemFolderId(id),
       M.Items(
-        T.CalendarItem(
-          T.Subject(event.subject),
-          T.Body(event.body or u'', BodyType="HTML"),
+        T.Contact(
+          T.GivenName(contact.name),
+          T.CompanyName(contact.company_name or u'', BodyType="HTML"),
         )
       ),
       SendMeetingInvitations="SendToAllAndSaveCopy"

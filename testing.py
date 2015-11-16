@@ -1,8 +1,8 @@
 from pyexchange import Exchange2010Service, ExchangeNTLMAuthConnection
 
 URL = u'https://mail.vanroey.be/EWS/Exchange.asmx'
-USERNAME = u'domain\\yenthe'
-PASSWORD = u"superpasswd"
+USERNAME = u'DOMAIN\\yenthe'
+PASSWORD = u"mypass"
 from datetime import datetime
 from pytz import timezone
 
@@ -51,24 +51,14 @@ service = Exchange2010Service(connection)
 
 
 # You can set event properties when you instantiate the event...
-event = service.contact().new_contact(
-  subject=u"80s Movie night",
-  attendees=[u'yenthe.vanginneken@vanroey.be'],
-  location = u"My house",
+contact = service.contact().new_contact(
+  name=u"80s Movie night",
+  company_name = u"My house",
 )
 
 # ...or afterwards
-event.start=timezone("US/Pacific").localize(datetime(2015,11,16,15,0,0))
-event.end=timezone("US/Pacific").localize(datetime(2015,11,16,21,0,0))
-
-event.html_body = u"""<html>
-    <body>
-        <h1>80s Movie night</h1>
-        <p>We're watching Spaceballs, Wayne's World, and
-        Bill and Ted's Excellent Adventure.</p>
-        <p>PARTY ON DUDES!</p>
-    </body>
-</html>"""
+contact.name = u"Yenthe"
+contact.company_name = u"Van Roey"
 
 # Connect to Exchange and create the event
-event.create()
+contact.create()

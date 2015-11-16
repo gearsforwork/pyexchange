@@ -7,6 +7,7 @@ Unless required by applicable law or agreed to in writing, software?distributed 
 
 import logging
 from ..base.calendar import BaseExchangeCalendarEvent, BaseExchangeCalendarService, ExchangeEventOrganizer, ExchangeEventResponse
+from ..base.contact import BaseExchangeContactEvent, BaseExchangeContactService, ExchangeEventOrganizer, ExchangeEventResponse
 from ..base.folder import BaseExchangeFolder, BaseExchangeFolderService
 from ..base.soap import ExchangeServiceSOAP
 from ..exceptions import FailedExchangeException, ExchangeStaleChangeKeyException, ExchangeItemNotFoundException, ExchangeInternalServerTransientErrorException, ExchangeIrresolvableConflictException, InvalidEventType
@@ -30,7 +31,7 @@ class Exchange2010Service(ExchangeServiceSOAP):
   def mail(self):
     raise NotImplementedError("Sorry - nothin' here. Feel like adding it? :)")
 
-  def contact(self,id="contact"):
+  def contact(self,id="contacts"):
     return Exchange2010ContactService(service=self, calendar_id=id)
 
   def folder(self):
@@ -707,7 +708,7 @@ class Exchange2010CalendarEvent(BaseExchangeCalendarEvent):
     return [id_element.get(u"Id") for id_element in conflicting_ids]
 
 
-class Exchange2010ContactService(BaseExchangeCalendarService):
+class Exchange2010ContactService(BaseExchangeContactService):
 
   def event(self, id=None, **kwargs):
     return Exchange2010ContactEvent(service=self.service, id=id, **kwargs)
@@ -799,7 +800,7 @@ class Exchange2010ContactEventList(object):
     return self
 
 
-class Exchange2010ContactEvent(BaseExchangeCalendarEvent):
+class Exchange2010ContactEvent(BaseExchangeContactEvent):
 
   def _init_from_service(self, id):
     log.debug(u'Creating new Exchange2010ContactEvent object from ID')
@@ -831,43 +832,6 @@ class Exchange2010ContactEvent(BaseExchangeCalendarEvent):
     raise NotImplementedError
 
   def validate(self):
-
-    if self.recurrence is not None:
-
-      if not (isinstance(self.recurrence_end_date, date)):
-        raise ValueError('recurrence_end_date must be of type date')
-      elif (self.recurrence_end_date < self.start.date()):
-        raise ValueError('recurrence_end_date must be after start')
-
-      if self.recurrence == u'daily':
-
-        if not (isinstance(self.recurrence_interval, int) and 1 <= self.recurrence_interval <= 999):
-          raise ValueError('recurrence_interval must be an int in the range from 1 to 999')
-
-      elif self.recurrence == u'weekly':
-
-        if not (isinstance(self.recurrence_interval, int) and 1 <= self.recurrence_interval <= 99):
-          raise ValueError('recurrence_interval must be an int in the range from 1 to 99')
-
-        if self.recurrence_days is None:
-          raise ValueError('recurrence_days is required')
-        for day in self.recurrence_days.split(' '):
-          if day not in self.WEEKLY_DAYS:
-            raise ValueError('recurrence_days received unknown value: %s' % day)
-
-      elif self.recurrence == u'monthly':
-
-        if not (isinstance(self.recurrence_interval, int) and 1 <= self.recurrence_interval <= 99):
-          raise ValueError('recurrence_interval must be an int in the range from 1 to 99')
-
-      elif self.recurrence == u'yearly':
-
-        pass  # everything is pulled from start
-
-      else:
-
-        raise ValueError('recurrence received unknown value: %s' % self.recurrence)
-
     super(Exchange2010ContactEvent, self).validate()
 
   def create(self):
