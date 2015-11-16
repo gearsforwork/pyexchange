@@ -655,7 +655,7 @@ def new_contact(contact):
               <t:Street>1234 56th Ave</t:Street>
               <t:City>La Habra</t:City>
               <t:State>CA</t:State>
-              <t: CountryOrRegion>USA</t: CountryOrRegion>
+              <t:CountryOrRegion>USA</t:CountryOrRegion>
             </t:Entry>
           </t:PhysicalAddresses>
           <t:PhoneNumbers>
