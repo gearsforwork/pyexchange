@@ -767,7 +767,7 @@ class Exchange2010ContactEventList(object):
       for item in items:
         self._add_event(xml=soap_request.M.Items(deepcopy(item)))
     else:
-      log.debug(u'No calendar items found with search parameters.')
+      log.debug(u'No contact items found with search parameters.')
 
     return self
 
@@ -836,15 +836,13 @@ class Exchange2010ContactEvent(BaseExchangeContactEvent):
 
   def create(self):
     """
-    Creates an event in Exchange. ::
+    Creates a contact in Exchange. ::
 
-        event = service.calendar().new_event(
-          subject=u"80s Movie Night",
-          location = u"My house",
+        contact = service.contact().new_contact(
+          Name=u"Yenthe",
+          company_name = u"Google",
         )
-        event.create()
-
-    Invitations to attendees are sent out immediately.
+        contact.create()
 
     """
     self.validate()
@@ -881,10 +879,10 @@ class Exchange2010ContactEvent(BaseExchangeContactEvent):
 
   def update(self, calendar_item_update_operation_type=u'SendToAllAndSaveCopy', **kwargs):
     """
-    Updates an event in Exchange.  ::
+    Updates a contact in Exchange.  ::
 
-        event = service.calendar().get_event(id='KEY HERE')
-        event.location = u'New location'
+        contact = service.contact().get_contact(id='KEY HERE')
+        contact.name = u'New name'
         event.update()
 
     If no changes to the event have been made, this method does nothing.
@@ -926,48 +924,19 @@ class Exchange2010ContactEvent(BaseExchangeContactEvent):
 
   def cancel(self):
     """
-    Cancels an event in Exchange.  ::
+    Removes a contact in Exchange.  ::
 
-        event = service.calendar().get_event(id='KEY HERE')
-        event.cancel()
+        contact = service.contact().get_event(id='KEY HERE')
+        contact.cancel()
 
-    This will send notifications to anyone who has not declined the meeting.
     """
     if not self.id:
-      raise TypeError(u"You can't delete an event that hasn't been created yet.")
+      raise TypeError(u"You can't delete a contact that hasn't been created yet.")
 
     self.refresh_change_key()
     self.service.send(soap_request.delete_event(self))
     # TODO rsanders high - check return status to make sure it was actually sent
     return None
-
-  def move_to(self, folder_id):
-    """
-    :param str folder_id: The Calendar ID to where you want to move the event to.
-    Moves an event to a different folder (calendar).  ::
-
-      event = service.calendar().get_event(id='KEY HERE')
-      event.move_to(folder_id='NEW CALENDAR KEY HERE')
-    """
-    if not folder_id:
-      raise TypeError(u"You can't move an event to a non-existant folder")
-
-    if not isinstance(folder_id, BASESTRING_TYPES):
-      raise TypeError(u"folder_id must be a string")
-
-    if not self.id:
-      raise TypeError(u"You can't move an event that hasn't been created yet.")
-
-    self.refresh_change_key()
-    response_xml = self.service.send(soap_request.move_event(self, folder_id))
-    new_id, new_change_key = self._parse_id_and_change_key_from_response(response_xml)
-    if not new_id:
-      raise ValueError(u"MoveItem returned success but requested item not moved")
-
-    self._id = new_id
-    self._change_key = new_change_key
-    self.calendar_id = folder_id
-    return self
 
   def get_master(self):
     """
@@ -994,307 +963,6 @@ class Exchange2010ContactEvent(BaseExchangeContactEvent):
     response_xml = self.service.send(body)
 
     return Exchange2010ContactEvent(service=self.service, xml=response_xml)
-
-  def get_occurrence(self, instance_index):
-    """
-      get_occurrence(instance_index)
-      :param iterable instance_index: This should be tuple or list of integers which correspond to occurrences.
-      :raises TypeError: When instance_index is not an iterable of ints.
-      :raises InvalidEventType: When this method is called on an event that is not a RecurringMaster type.
-
-      This will return a list of occurrence events.
-
-      **Examples**::
-
-        master = service.calendar().get_event(id='<event_id>')
-
-        # The following will return the first 20 occurrences in the recurrence.
-        # If there are not 20 occurrences, it will only return what it finds.
-        occurrences = master.get_occurrence(range(1,21))
-        for occurrence in occurrences:
-          print occurrence.start
-
-    """
-
-    if not all([isinstance(i, int) for i in instance_index]):
-      raise TypeError("instance_index must be an interable of type int")
-
-    if self.type != 'RecurringMaster':
-      raise InvalidEventType("get_occurrance method can only be called on a 'RecurringMaster' event type")
-
-    body = soap_request.get_occurrence(exchange_id=self._id, instance_index=instance_index, format=u"AllProperties")
-    response_xml = self.service.send(body)
-
-    items = response_xml.xpath(u'//m:GetItemResponseMessage/m:Items', namespaces=soap_request.NAMESPACES)
-    events = []
-    for item in items:
-      event = Exchange2010ContactEvent(service=self.service, xml=deepcopy(item))
-      if event.id:
-        events.append(event)
-
-    return events
-
-  def conflicting_events(self):
-    """
-      conflicting_events()
-
-      This will return a list of conflicting events.
-
-      **Example**::
-
-        event = service.calendar().get_event(id='<event_id>')
-        for conflict in event.conflicting_events():
-          print conflict.subject
-
-    """
-
-    if not self.conflicting_event_ids:
-      return []
-
-    body = soap_request.get_item(exchange_id=self.conflicting_event_ids, format="AllProperties")
-    response_xml = self.service.send(body)
-
-    items = response_xml.xpath(u'//m:GetItemResponseMessage/m:Items', namespaces=soap_request.NAMESPACES)
-    events = []
-    for item in items:
-      event = Exchange2010ContactEvent(service=self.service, xml=deepcopy(item))
-      if event.id:
-        events.append(event)
-
-    return events
-
-  def refresh_change_key(self):
-
-    body = soap_request.get_item(exchange_id=self._id, format=u"IdOnly")
-    response_xml = self.service.send(body)
-    self._id, self._change_key = self._parse_id_and_change_key_from_response(response_xml)
-
-    return self
-
-  def _parse_id_and_change_key_from_response(self, response):
-
-    id_elements = response.xpath(u'//m:Items/t:CalendarItem/t:ItemId', namespaces=soap_request.NAMESPACES)
-
-    if id_elements:
-      id_element = id_elements[0]
-      return id_element.get(u"Id", None), id_element.get(u"ChangeKey", None)
-    else:
-      return None, None
-
-  def _parse_response_for_get_event(self, response):
-
-    result = self._parse_event_properties(response)
-
-    organizer_properties = self._parse_event_organizer(response)
-    if organizer_properties is not None:
-      if 'email' not in organizer_properties:
-        organizer_properties['email'] = None
-      result[u'organizer'] = ExchangeEventOrganizer(**organizer_properties)
-
-    attendee_properties = self._parse_event_attendees(response)
-    result[u'_attendees'] = self._build_resource_dictionary([ExchangeEventResponse(**attendee) for attendee in attendee_properties])
-
-    resource_properties = self._parse_event_resources(response)
-    result[u'_resources'] = self._build_resource_dictionary([ExchangeEventResponse(**resource) for resource in resource_properties])
-
-    result['_conflicting_event_ids'] = self._parse_event_conflicts(response)
-
-    return result
-
-  def _parse_event_properties(self, response):
-
-    property_map = {
-      u'subject': {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Subject',
-      },
-      u'location':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Location',
-      },
-      u'availability':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:LegacyFreeBusyStatus',
-      },
-      u'start':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Start',
-        u'cast': u'datetime',
-      },
-      u'end':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:End',
-        u'cast': u'datetime',
-      },
-      u'html_body':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Body[@BodyType="HTML"]',
-      },
-      u'text_body':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Body[@BodyType="Text"]',
-      },
-      u'_type':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:CalendarItemType',
-      },
-      u'reminder_minutes_before_start':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:ReminderMinutesBeforeStart',
-        u'cast': u'int',
-      },
-      u'is_all_day':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:IsAllDayEvent',
-        u'cast': u'bool',
-      },
-      u'recurrence_end_date':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Recurrence/t:EndDateRecurrence/t:EndDate',
-        u'cast': u'date_only_naive',
-      },
-      u'recurrence_interval':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Recurrence/*/t:Interval',
-        u'cast': u'int',
-      },
-      u'recurrence_days':
-      {
-        u'xpath': u'//m:Items/t:CalendarItem/t:Recurrence/t:WeeklyRecurrence/t:DaysOfWeek',
-      },
-    }
-
-    result = self.service._xpath_to_dict(element=response, property_map=property_map, namespace_map=soap_request.NAMESPACES)
-
-    try:
-      recurrence_node = response.xpath(u'//m:Items/t:CalendarItem/t:Recurrence', namespaces=soap_request.NAMESPACES)[0]
-    except IndexError:
-      recurrence_node = None
-
-    if recurrence_node is not None:
-
-      if recurrence_node.find('t:DailyRecurrence', namespaces=soap_request.NAMESPACES) is not None:
-        result['recurrence'] = 'daily'
-
-      elif recurrence_node.find('t:WeeklyRecurrence', namespaces=soap_request.NAMESPACES) is not None:
-        result['recurrence'] = 'weekly'
-
-      elif recurrence_node.find('t:AbsoluteMonthlyRecurrence', namespaces=soap_request.NAMESPACES) is not None:
-        result['recurrence'] = 'monthly'
-
-      elif recurrence_node.find('t:AbsoluteYearlyRecurrence', namespaces=soap_request.NAMESPACES) is not None:
-        result['recurrence'] = 'yearly'
-
-    return result
-
-  def _parse_event_organizer(self, response):
-
-    organizer = response.xpath(u'//m:Items/t:CalendarItem/t:Organizer/t:Mailbox', namespaces=soap_request.NAMESPACES)
-
-    property_map = {
-      u'name':
-      {
-        u'xpath': u't:Name'
-      },
-      u'email':
-      {
-        u'xpath': u't:EmailAddress'
-      },
-    }
-
-    if organizer:
-      return self.service._xpath_to_dict(element=organizer[0], property_map=property_map, namespace_map=soap_request.NAMESPACES)
-    else:
-      return None
-
-  def _parse_event_resources(self, response):
-    property_map = {
-      u'name':
-      {
-        u'xpath': u't:Mailbox/t:Name'
-      },
-      u'email':
-      {
-        u'xpath': u't:Mailbox/t:EmailAddress'
-      },
-      u'response':
-      {
-        u'xpath': u't:ResponseType'
-      },
-      u'last_response':
-      {
-        u'xpath': u't:LastResponseTime',
-        u'cast': u'datetime'
-      },
-    }
-
-    result = []
-
-    resources = response.xpath(u'//m:Items/t:CalendarItem/t:Resources/t:Attendee', namespaces=soap_request.NAMESPACES)
-
-    for attendee in resources:
-      attendee_properties = self.service._xpath_to_dict(element=attendee, property_map=property_map, namespace_map=soap_request.NAMESPACES)
-      attendee_properties[u'required'] = True
-
-      if u'last_response' not in attendee_properties:
-        attendee_properties[u'last_response'] = None
-
-      if u'email' in attendee_properties:
-        result.append(attendee_properties)
-
-    return result
-
-  def _parse_event_attendees(self, response):
-
-    property_map = {
-      u'name':
-      {
-        u'xpath': u't:Mailbox/t:Name'
-      },
-      u'email':
-      {
-        u'xpath': u't:Mailbox/t:EmailAddress'
-      },
-      u'response':
-      {
-        u'xpath': u't:ResponseType'
-      },
-      u'last_response':
-      {
-        u'xpath': u't:LastResponseTime',
-        u'cast': u'datetime'
-      },
-    }
-
-    result = []
-
-    required_attendees = response.xpath(u'//m:Items/t:CalendarItem/t:RequiredAttendees/t:Attendee', namespaces=soap_request.NAMESPACES)
-    for attendee in required_attendees:
-      attendee_properties = self.service._xpath_to_dict(element=attendee, property_map=property_map, namespace_map=soap_request.NAMESPACES)
-      attendee_properties[u'required'] = True
-
-      if u'last_response' not in attendee_properties:
-        attendee_properties[u'last_response'] = None
-
-      if u'email' in attendee_properties:
-        result.append(attendee_properties)
-
-    optional_attendees = response.xpath(u'//m:Items/t:CalendarItem/t:OptionalAttendees/t:Attendee', namespaces=soap_request.NAMESPACES)
-
-    for attendee in optional_attendees:
-      attendee_properties = self.service._xpath_to_dict(element=attendee, property_map=property_map, namespace_map=soap_request.NAMESPACES)
-      attendee_properties[u'required'] = False
-
-      if u'last_response' not in attendee_properties:
-        attendee_properties[u'last_response'] = None
-
-      if u'email' in attendee_properties:
-        result.append(attendee_properties)
-
-    return result
-
-  def _parse_event_conflicts(self, response):
-    conflicting_ids = response.xpath(u'//m:Items/t:CalendarItem/t:ConflictingMeetings/t:CalendarItem/t:ItemId', namespaces=soap_request.NAMESPACES)
-    return [id_element.get(u"Id") for id_element in conflicting_ids]
 
 
 class Exchange2010FolderService(BaseExchangeFolderService):
