@@ -667,7 +667,7 @@ def new_contact(contact):
       </m:Items>
     </m:CreateItem>
     """
-    id = T.DistinguishedFolderId(Id=contact.calendar_id) if contact.calendar_id in DISTINGUISHED_IDS else T.FolderId(Id=calendar.contact_id)
+    id = T.DistinguishedFolderId(Id=contact.calendar_id) if contact.calendar_id in DISTINGUISHED_IDS else T.FolderId(Id=contact.contact_id)
     root = M.CreateItem(
       M.SavedItemFolderId(id),
       M.Items(
