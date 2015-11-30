@@ -673,7 +673,7 @@ def new_contact(contact):
       M.Items(
         T.Contact(
           T.GivenName(contact.name),
-          T.CompanyName(contact.company_name or u'', BodyType="HTML"),
+          T.CompanyName(contact.company_name),
         )
       ),
       SendMeetingInvitations="SendToAllAndSaveCopy"
