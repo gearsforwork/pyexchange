@@ -501,7 +501,6 @@ def update_item(event, updated_attributes, calendar_item_update_operation_type):
     )
 
   if u'onBehalfOf' in updated_attributes:
-    print('HAY HAY HAY')
     update_property_node(field_uri="item:onBehalfOf", node_to_insert=T.OnBehalfOf(event.onBehalfOf))
 
   if u'text_body' in updated_attributes:
