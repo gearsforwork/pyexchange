@@ -48,6 +48,7 @@ class BaseExchangeCalendarEvent(object):
   end = None
   location = None
   html_body = None
+  onBehalfOf = None
   text_body = None
   attachments = None
   organizer = None
@@ -73,7 +74,7 @@ class BaseExchangeCalendarEvent(object):
   DATA_ATTRIBUTES = [
     u'_id', u'subject', u'start', u'end', u'location', u'html_body', u'text_body', u'organizer',
     u'_attendees', u'_resources', u'reminder_minutes_before_start', u'is_all_day',
-    'recurrence', 'recurrence_interval', 'recurrence_days', 'recurrence_day',
+    'recurrence', 'recurrence_interval', 'recurrence_days', 'recurrence_day', u'onBehalfOf'
   ]
 
   RECURRENCE_ATTRIBUTES = [
