@@ -500,6 +500,10 @@ def update_item(event, updated_attributes, calendar_item_update_operation_type):
       update_property_node(field_uri="item:Body", node_to_insert=T.Body(event.html_body, BodyType="HTML"))
     )
 
+  if u'onBehalfOf' in updated_attributes:
+    print('HAY HAY HAY')
+    update_property_node(field_uri="item:onBehalfOf", node_to_insert=T.OnBehalfOf(event.onBehalfOf))
+
   if u'text_body' in updated_attributes:
     update_node.append(
       update_property_node(field_uri="item:Body", node_to_insert=T.Body(event.text_body, BodyType="Text"))
